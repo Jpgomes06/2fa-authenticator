@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import { generateSecret } from '@colingreybosh/otp-lib';
 
 export class CreateTotp{
     private issuer: string;
@@ -12,12 +13,15 @@ export class CreateTotp{
     }
     createTotpAccount(){
         const accountID = uuidv4();
+        const secret = generateSecret();
+        const createdAt = new Date().toISOString();
         return {
             label: this.label,
             issuer: this.issuer,
             user_id: this.user_id,
-            account_id: accountID
+            account_id: accountID,
+            secret: secret,
+            created_at: createdAt
         }
     }
-
 }
