@@ -6,34 +6,31 @@ export class RabbitMQGateway {
     private readonly queueName = process.env.QUEUE_NAME || 'otp-accounts';
 
     constructor() {
-        this.connect();
+        this.connect()
     }
 
     private async connect():Promise<void> {
         try {
             this.connection = await connect(process.env.RABBITMQ_URL || 'amqp://rabbitmq:5672');
-            const channel = await this.connection.createChannel();
+            this.channel = await this.connection.createChannel();
+            await this.channel.assertQueue(this.queueName, { durable: true });
             console.log('Connected to RabbitMQ');
         } catch (error) {
-            console.error('Error connecting to RabbitMQ:', error);
-            throw error;
+            throw new Error('Failed to connect to RabbitMQ.');
         }
     }
 
-    // async publish(order: Order): Promise<boolean> {
-    //     try {
-    //         if (!this.channel) {
-    //             await this.connect();
-    //         }
-    //
-    //         const message = JSON.stringify(order);
-    //         this.channel?.sendToQueue(this.queueName, Buffer.from(message), {
-    //             persistent: true,
-    //         });
-    //
-    //         return true;
-    //     } catch (error) {
-    //         return false;
-    //     }
-    // }
+    public async publish(label:string, issuer:string, user_id:string, account_id:string, secret:string, created_at:string): Promise<boolean | undefined> {
+        try {
+            if (!this.channel) {
+                await this.connect();
+            }
+            const message = JSON.stringify({label, issuer, user_id, account_id, secret, created_at});
+            return this.channel?.sendToQueue(this.queueName, Buffer.from(message), {
+                persistent: true,
+            });
+        } catch (error) {
+            throw new Error('Internal server error.');
+        }
+    }
 }

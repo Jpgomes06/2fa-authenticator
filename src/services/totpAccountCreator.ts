@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import QRCode from 'qrcode';
 import { generateSecret } from '@colingreybosh/otp-lib';
+import {RabbitMQGateway} from "../infra/rabbitmq-gateway";
 
 export class CreateTotp{
     private issuer: string;
@@ -18,8 +19,13 @@ export class CreateTotp{
         const createdAt = new Date().toISOString();
         const issuer = encodeURIComponent(this.issuer);
         const label = encodeURIComponent(this.label);
+        const rabbitMqPublish = new RabbitMQGateway();
         const otpAuthUri = `otpauth://totp/${issuer}:${label}?secret=${secret}&issuer=${issuer}`
         const qrCodeBase64 = await QRCode.toDataURL(otpAuthUri);
+        const sendMessageToQueue = await rabbitMqPublish.publish(label, issuer, this.user_id, accountID, secret, createdAt)
+        if(sendMessageToQueue != true || undefined){
+            throw new Error('Error sending to queue.');
+        }
         return {
             label: this.label,
             issuer: this.issuer,
