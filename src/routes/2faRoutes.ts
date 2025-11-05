@@ -7,4 +7,4 @@ export function createTotpAccount() {
     const router = express.Router();
     router.post('/', createAccountController.createAccount);
     return router;
-};
+}

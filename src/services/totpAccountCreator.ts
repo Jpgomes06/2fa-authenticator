@@ -1,40 +1,32 @@
-import { v4 as uuidv4 } from 'uuid';
-import QRCode from 'qrcode';
-import { generateSecret } from '@colingreybosh/otp-lib';
-import {RabbitMQGateway} from "../infra/rabbitmq-gateway";
+import { IUuidGenerator } from '../contracts/IUuidGenerator';
+import { ISecretGenerator } from '../contracts/ISecretGenerator';
+import { IQrCodeGenerator } from '../contracts/IQrCodeGenerator';
+import { ICreateTotpRepository } from '../contracts/ICreateTotpRepository';
+import {TotpAccount} from "../models/totpAccount";
 
-export class CreateTotp{
-    private issuer: string;
-    private label: string;
-    private user_id: string;
+export class CreateTotpService{
+    constructor(
+        private readonly uuidGenerator:IUuidGenerator,
+        private readonly secretGenerator: ISecretGenerator,
+        private readonly qrCodeGenerator: IQrCodeGenerator,
+        private readonly createTotpRepository: ICreateTotpRepository
+    ) {}
 
-    constructor(label:string, issuer:string, user_id:string) {
-        this.label = label
-        this.issuer = issuer
-        this.user_id = user_id
-    }
-    async createTotpAccount(){
-        const accountID = uuidv4();
-        const secret = generateSecret();
+    async createTotpAccount(label:string, issuer:string, userID:string):Promise<TotpAccount>{
+        const accountID = this.uuidGenerator.generate();
+        const secret = this.secretGenerator.generate();
         const createdAt = new Date().toISOString();
-        const issuer = encodeURIComponent(this.issuer);
-        const label = encodeURIComponent(this.label);
-        const rabbitMqPublish = new RabbitMQGateway();
-        const otpAuthUri = `otpauth://totp/${issuer}:${label}?secret=${secret}&issuer=${issuer}`
-        const qrCodeBase64 = await QRCode.toDataURL(otpAuthUri);
-        const sendMessageToQueue = await rabbitMqPublish.publish(label, issuer, this.user_id, accountID, secret, createdAt)
-        if(sendMessageToQueue != true || undefined){
-            throw new Error('Error sending to queue.');
-        }
+        const encodedIssuer = encodeURIComponent(issuer);
+        const encodedLabel = encodeURIComponent(label);
+        const otpAuthUri = `otpauth://totp/${encodedIssuer}:${encodedLabel}?secret=${secret}&issuer=${encodedIssuer}`;
+        const qrCodeBase64 = this.qrCodeGenerator.generate(otpAuthUri);
+        const payload:TotpAccount = { label, issuer, userID, accountID, secret, createdAt }
+        const published = await this.createTotpRepository.execute(payload);
+        if(!published) throw new Error('Error sending to queue!');
         return {
-            label: this.label,
-            issuer: this.issuer,
-            user_id: this.user_id,
-            account_id: accountID,
-            secret: secret,
-            created_at: createdAt,
-            otpauth_uri: otpAuthUri,
-            qrcode_base64: qrCodeBase64
+            ...payload,
+            otpAuthUri,
+            qrCodeBase64
         }
     }
 }

@@ -1,15 +1,12 @@
 import { ChannelModel, Channel, connect } from 'amqplib';
+import {TotpAccount} from "../models/totpAccount";
 
 export class RabbitMQGateway {
     private connection?: ChannelModel;
     private channel?: Channel;
     private readonly queueName = process.env.QUEUE_NAME || 'otp-accounts';
 
-    constructor() {
-        this.connect()
-    }
-
-    private async connect():Promise<void> {
+    public async connect():Promise<void> {
         try {
             this.connection = await connect(process.env.RABBITMQ_URL || 'amqp://rabbitmq:5672');
             this.channel = await this.connection.createChannel();
@@ -20,15 +17,15 @@ export class RabbitMQGateway {
         }
     }
 
-    public async publish(label:string, issuer:string, user_id:string, account_id:string, secret:string, created_at:string): Promise<boolean | undefined> {
+    public async publish(totpAccount: TotpAccount): Promise<boolean | undefined> {
         try {
             if (!this.channel) {
                 await this.connect();
             }
-            const message = JSON.stringify({label, issuer, user_id, account_id, secret, created_at});
+            const message = JSON.stringify({totpAccount});
             return this.channel?.sendToQueue(this.queueName, Buffer.from(message), {
                 persistent: true,
-            });
+            })
         } catch (error) {
             throw new Error('Internal server error.');
         }
