@@ -6,5 +6,5 @@ export type TotpAccount = {
     secret:string,
     createdAt:string
     otpAuthUri?:string,
-    qrCodeBase64?:Promise<string>,
+    qrCodeBase64?:string,
 };

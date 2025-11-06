@@ -1,6 +1,6 @@
 import express from 'express';
 import 'dotenv/config';
-import { createTotpAccount } from './routes/2faRoutes';
+import { createTotpAccountRouter } from './routes/2faRoutes';
 import { RabbitMQGateway } from './infra/rabbitmq-gateway';
 import {errorHandler} from "./middlewares/error";
 import { CreateTotpService } from './services/totpAccountCreator'
@@ -17,15 +17,13 @@ const secretProvider = new SecretProvider();
 const qrCodeProvider = new QrCodeProvider();
 const createTotpProvider = new CreateTotpProvider();
 
-
-const rabbitMQGateway = new RabbitMQGateway();
 const createTotpService = new CreateTotpService(uuidProvider, secretProvider, qrCodeProvider, createTotpProvider);
-const createAccountController = new CreateAccountController();
+const createAccountController = new CreateAccountController(createTotpService);
 
 app.use(express.json());
-app.use('/2fa/totp', createTotpAccount());
+app.use('/2fa/totp', createTotpAccountRouter(createAccountController));
 app.use(errorHandler);
 
-app.listen(PORT => {
+app.listen(PORT,() => {
     console.log(`Server running on http://localhost:${PORT}`);
 });

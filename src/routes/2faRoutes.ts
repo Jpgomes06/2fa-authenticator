@@ -1,10 +1,10 @@
 import express from 'express';
-import { CreateAccountController } from '../controllers/createAccountController';
+import {ICreateTotpController} from "../contracts/ICreateTotpController";
 
-const createAccountController = new CreateAccountController();
-
-export function createTotpAccount() {
+export function createTotpAccountRouter(controller:ICreateTotpController) {
     const router = express.Router();
-    router.post('/', createAccountController.createAccount);
+    router.post('/', (request, response) =>{
+        return controller.handle(request,response)
+    });
     return router;
 }
