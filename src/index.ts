@@ -1,14 +1,13 @@
 import express from 'express';
 import 'dotenv/config';
 import { createTotpAccountRouter } from './routes/2faRoutes';
-import { RabbitMQGateway } from './infra/rabbitmq-gateway';
 import {errorHandler} from "./middlewares/error";
 import { CreateTotpService } from './services/totpAccountCreator'
 import { CreateAccountController } from './controllers/createAccountController'
 import { UuidProvider } from "./services/uuidProvider";
 import { SecretProvider } from "./services/secretProvider";
 import {QrCodeProvider} from "./services/qrCodeProvider";
-import {CreateTotpProvider} from "./services/createTotpProvider";
+import {CreateTotpProvider} from "./repositories/createTotpProvider";
 
 const app = express();
 const PORT = 3000;
